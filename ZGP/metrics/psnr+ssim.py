@@ -32,10 +32,14 @@ def compare_ssim(img1, img2):
 
     return float(ssim_index)
 
-def calc_measures(hr_path, txt_path, calc_psnr=True, calc_ssim=True):
+def calc_measures(hr_path, txt_path, image_format="png", calc_psnr=True, calc_ssim=True):
     # z 结果的txt文件保存路径
-    txt_file = open(txt_path, 'a')
-    HR_files = glob.glob(hr_path + '/*')
+    txt_path = txt_path + "mean_ssim_psnr.txt"
+    if not os.path.exists(txt_path):
+        os.system(r"touch {}".format(txt_path))  # 调用系统命令行来创建文件
+    #z 'w'对已存在的文件覆盖
+    txt_file = open(txt_path, 'w')
+    HR_files = [i for i in glob.glob(hr_path + '/*') if i.endswith("real." + image_format)]
     mean_psnr = 0
     mean_ssim = 0
 
@@ -43,6 +47,7 @@ def calc_measures(hr_path, txt_path, calc_psnr=True, calc_ssim=True):
         hr_img = cv2.imread(file)
         filename = file.rsplit('/', 1)[-1]
         path = os.path.join(args.inference_result, filename)
+        path = path.replace("real.", "fake.")
 
         if not os.path.isfile(path):
             raise FileNotFoundError('')
@@ -52,24 +57,24 @@ def calc_measures(hr_path, txt_path, calc_psnr=True, calc_ssim=True):
         print('-' * 10)
         if calc_psnr:
             psnr = compare_psnr(hr_img, inf_img)
-            print('{0} : PSNR {1:.3f} dB'.format(filename, psnr))
+            # print('{0} : PSNR {1:.4f} dB'.format(filename, psnr))
             mean_psnr += psnr
         if calc_ssim:
-            ssim = compare_ssim(hr_img, inf_img)  # 单个SSIM比较值
-            print('{0} : SSIM {1:.3f}'.format(filename, ssim))
+            ssim = compare_ssim(hr_img, inf_img)  # 三通道SSIM比较值
+            # print('{0} : SSIM {1:.4f}'.format(filename, ssim))
             mean_ssim += ssim
-        txt_file.write('PSNR,{:.3f} , SSIM, {.3f}'.format(psnr , ssim))
-        txt_file.write('\n')
+        print('{0} : PSNR {1:.4f} dB, SSIM {2:.4f}'.format(filename, psnr, ssim))
+        txt_file.write('{0} : PSNR {1:.4f} dB, SSIM {2:.4f}\n'.format(filename, psnr, ssim))
 
     print('-' * 10)
     if calc_psnr:
         M_psnr = mean_psnr / len(HR_files)
-        print('mean-PSNR {:.3f} dB'.format(M_psnr))
     if calc_ssim:
         M_ssim = mean_ssim / len(HR_files)
-        print('mean-SSIM {:.3f}'.format(M_ssim))
-    txt_file.write('mean-PSNR, {:.3f} , mean-SSIM, {:.3f}'.format(M_psnr,M_ssim))
+    print('mean-PSNR: {0:.4f} dB, mean-SSIM: {1:.4f}'.format(M_psnr, M_ssim))
+    txt_file.write('mean-PSNR: {0:.4f} dB, mean-SSIM: {1:.4f}'.format(M_psnr, M_ssim))
     txt_file.write('\n'*2)
+    txt_file.close()
 
 
 def calc_single_image_measures():
@@ -79,18 +84,18 @@ def calc_single_image_measures():
     inf_img = cv2.imread(inf_img_path)
     psnr = compare_psnr(hr_img, inf_img)
     ssim = compare_ssim(hr_img, inf_img)
-    print('PSNR = {0:.4f} dB，SSIM = {1:.4f}'.format(psnr, ssim))
+    print('PSNR: {0:.4f} dB，SSIM: {1:.4f}'.format(psnr, ssim))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--HR_data_dir', default=r"H:\SMU\Wang\1080ti\EUVP_LAB\test_latest\images\test_p0__real_A.png", type=str)       #原始图像路径
-    parser.add_argument('--inference_result', default=r"H:\SMU\Wang\1080ti\EUVP_LAB\test_latest\images\test_p0__fake_B.png", type=str)  #生成图像路径
+    parser.add_argument('--HR_data_dir', default=r"H:\SMU\Wang\RCA-CycleGAN\RCA-CycleGAN\results\RCA\test_latest\images", type=str)       #原始图像路径
+    parser.add_argument('--inference_result', default=r"H:\SMU\Wang\RCA-CycleGAN\RCA-CycleGAN\results\RCA\test_latest\images", type=str)  #生成图像路径
     args = parser.parse_args()
 
     #z 计算多张图片的指标
-    # calc_measures(args.HR_data_dir, txt_path, calc_psnr=True, calc_ssim=True)
+    calc_measures(args.HR_data_dir, txt_path=r"H:\SMU\Wang\RCA-CycleGAN\RCA-CycleGAN\results\RCA\test_latest\images", calc_psnr=True, calc_ssim=True)
 
     #z 计算单张图片的指标；此时上面的路径就是图片的路径
-    calc_single_image_measures()
+    # calc_single_image_measures()
 
 
